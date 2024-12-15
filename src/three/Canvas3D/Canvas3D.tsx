@@ -39,7 +39,7 @@ const Canvas3D = () => {
           background
           backgroundIntensity={0.3}
           backgroundBlurriness={1}
-          environmentIntensity={0.3}
+          environmentIntensity={1}
         />
         <Model />
 
