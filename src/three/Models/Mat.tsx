@@ -10,6 +10,7 @@ import {
 } from "three";
 import CustomShaderMaterial from "three-custom-shader-material";
 import CustomShaderMaterialImpl from "three-custom-shader-material/vanilla";
+import { generateUUID } from "three/src/math/MathUtils.js";
 
 /**
  *
@@ -22,7 +23,7 @@ export default function Mat() {
     ["/diffuse.jpg", "/nrm.jpg"],
     (te: Texture[]) => {
       te.forEach((t) => {
-        t.repeat.set(5, 5);
+        t.repeat.set(10, 10);
         t.wrapS = t.wrapT = RepeatWrapping;
         t.flipY = false;
       });
@@ -45,7 +46,10 @@ export default function Mat() {
 
   return (
     <CustomShaderMaterial
+      key={generateUUID()}
       ref={matRef}
+      metalness={0}
+      roughness={0.9}
       baseMaterial={MeshStandardMaterial}
       normalScale={new Vector2(1, 1)}
       side={DoubleSide}
@@ -55,22 +59,20 @@ export default function Mat() {
         isEmbelish: { value: false },
         uTexture: { value: diffuse }, // texture map
         uExtraNorm: { value: norm },
+        uInitiNor: { value: normal },
+        uUseExtNrm: { value: true },
       }}
       /**
        * Passing only values to vertex shader, no need to change default values
        */
       vertexShader={
         /* glsl */ `
-
                 varying vec2 vUv;
-            
-                void main () {
-            
+                void main () {            
                     /**
                      * Pass to Fragment shader
                      */
                     vUv = uv;
-        
                 }
                 `
       }
@@ -82,10 +84,13 @@ export default function Mat() {
                 varying vec2 vUv;
                 uniform sampler2D uTexture;
                 uniform sampler2D uExtraNorm;
-    
+                uniform sampler2D uInitiNor;
+                uniform bool uUseExtNrm;
+                
                 void main () {
     
                 vec4 vInitialCol = csm_DiffuseColor;
+                vec3 vInitialNorm = csm_FragNormal;
     
                 /**
                  * uvScale here should be fetched from uniforms
@@ -101,16 +106,12 @@ export default function Mat() {
                  */
     
                 // vec4 tex = clampToBorderTexture(texture2D(uTexture, uv), uv);
-                vec4 fNormalTexture = texture2D(uExtraNorm, fUv);
     
                 /**
                  * Mixing output, assuming asset2D is png and has alpha
                  */
                 // vec4 mixedOutput = mix(vInitialCol, tex, tex.a);
 
-                // csm_FragNormal.x = fNormalTexture.r;
-                // csm_FragNormal.y = fNormalTexture.g;
-                // csm_FragNormal.z = fNormalTexture.b;
                 // = vec3(fNormalTexture.x,fNormalTexture.y,fNormalTexture.z);
     
                 // csm_DiffuseColor = mixedOutput;
@@ -119,8 +120,22 @@ export default function Mat() {
                 // vec4 dst = texture(darkSideTex, vUv);
                 // float d = max(dot(geometry.normal, directionalLights[0].direction), 0.);
 
-                // float d = 1.;
-                // gl_FragColor = mix(fNormalTexture, gl_FragColor, smoothstep(0., 1.0, d));
+                // vec4 dst = texture(darkSideTex, vUv);
+                // float d = max(dot(geometry.normal, directionalLights[0].direction), 0.);
+
+
+                // vec3 vInitialNorm = csm_FragNormal.xyz * 2. - 1.;
+                // vec4 fNormalTexture = texture2D(uExtraNorm, fUv) * 2. - 1.;
+
+                vec3 n1 = texture2D(uInitiNor, fUv * 20.).xyz * 2. - 1.;
+                vec3 n2 = texture2D(uExtraNorm, fUv).xyz * 2. - 1.;
+
+                if(uUseExtNrm) {
+                  vec3 r = normalize(vec3(n1.xy + n2.xy, 1.));
+                  r.y *= -1.; 
+                  csm_FragNormal.xy -= r.xy;
+                }
+
             }
     `
       }
