@@ -1,7 +1,13 @@
 import { Canvas } from "@react-three/fiber";
 import { ACESFilmicToneMapping } from "three";
 import { Box } from "@chakra-ui/react";
-import { BakeShadows, Environment, Preload } from "@react-three/drei";
+import {
+  BakeShadows,
+  Environment,
+  OrbitControls,
+  Preload,
+} from "@react-three/drei";
+import Model from "../Models/Model";
 
 const Canvas3D = () => {
   return (
@@ -35,6 +41,9 @@ const Canvas3D = () => {
           backgroundBlurriness={1}
           environmentIntensity={0.3}
         />
+        <Model />
+
+        <OrbitControls />
 
         <BakeShadows />
         <directionalLight
